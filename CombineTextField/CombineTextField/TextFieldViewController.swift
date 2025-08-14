@@ -6,9 +6,12 @@
 //
 
 import UIKit
+import Combine
 
 class TextFieldViewController: UIViewController {
-
+        
+    var publisherTextField: UITextField!
+        
     @IBOutlet weak var collectionView: UICollectionView!
     
     enum Section: Int, CaseIterable {
@@ -24,6 +27,8 @@ class TextFieldViewController: UIViewController {
         applySnapshot()
     }
 
+    var cancellables = Set<AnyCancellable>()
+    
     enum Item {
         case textFieldItem
         case receiverItem
@@ -32,6 +37,10 @@ class TextFieldViewController: UIViewController {
     /// The data source which is responsible for providing the items.
 
     var dataSource: UICollectionViewDiffableDataSource<Section, Item>!
+    
+    /// The publisher for the text field which will emit text did change notifications
+    
+    var textFieldPublisher: (any Publisher)?
     
     /// Layout code that renders the compositional layout.
     
@@ -70,11 +79,20 @@ class TextFieldViewController: UIViewController {
     func createDataSource() {
     
         let textFieldCellRegistration = UICollectionView.CellRegistration<TextFieldCell, Item> { cell, indexPath, item in
-            
+            self.publisherTextField = cell.textField
         }
         
         let receiverItemCellRegistration = UICollectionView.CellRegistration<ReceiverItemCell, Item> { cell, indexPath, item in
             
+            NotificationCenter.default.publisher(for: UITextField.textDidChangeNotification, object: self.publisherTextField)
+                .compactMap({ $0.object as? UITextField })
+                .map({ $0.text })
+                .debounce(for: 0.5, scheduler: RunLoop.main)
+                .sink { completion in
+            } receiveValue: { text in
+                self.applySnapshot()
+                cell.textLabel.text = text
+            }.store(in: &self.cancellables)
         }
         
         let headerRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewListCell>(elementKind: UICollectionView.elementKindSectionHeader) { supplementaryView, elementKind, indexPath in
