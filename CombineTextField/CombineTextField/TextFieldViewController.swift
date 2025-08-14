@@ -49,7 +49,16 @@ class TextFieldViewController: UIViewController {
             let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize,
                                                            subitems: [item])
             
+            let headerSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1),
+                                                    heightDimension: .estimated(80))
+            
+            let header = NSCollectionLayoutBoundarySupplementaryItem(layoutSize: headerSize,
+                                                                     elementKind: UICollectionView.elementKindSectionHeader,
+                                                                     alignment: .topLeading)
+            
             let section = NSCollectionLayoutSection(group: group)
+            
+            section.boundarySupplementaryItems = [header]
             
             return section
         }
@@ -68,6 +77,18 @@ class TextFieldViewController: UIViewController {
             
         }
         
+        let headerRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewListCell>(elementKind: UICollectionView.elementKindSectionHeader) { supplementaryView, elementKind, indexPath in
+            var content = supplementaryView.defaultContentConfiguration()
+            
+            if indexPath.section == 0 {
+                content.text = "Combine Text Field"
+            } else {
+                content.text = "Combine Receiver"
+            }
+            
+            supplementaryView.contentConfiguration = content
+        }
+        
         dataSource = UICollectionViewDiffableDataSource<Section, Item>(collectionView: collectionView) { collectionView, indexPath, item in
             
             if indexPath.section == 0 {
@@ -81,6 +102,10 @@ class TextFieldViewController: UIViewController {
                                                                         item: item)
                 return cell
             }
+        }
+        
+        dataSource.supplementaryViewProvider = { collectionView, elementKind, indexPath in
+            return collectionView.dequeueConfiguredReusableSupplementary(using: headerRegistration, for: indexPath)
         }
     }
     
